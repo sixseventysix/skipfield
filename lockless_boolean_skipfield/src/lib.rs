@@ -93,13 +93,13 @@ mod tests {
                 sum += sf2.is_active(i) as usize;
             }
 
-            // writer thread is marking exactly half of the elements as erased
+            // writer thread is marking exactly half (set ERASE EVERY as 2) of the elements as erased
             // sum is checking how many elements are unerased (i.e. in its original state).
             // this test checks if concurrent access happens on the skipfield
             // if more than half of total elements are unerased, that means our reader accessed that value before the writer got to it
             // i.e. concurrent access
             // need to use a large value for size, something small like 100 would mean the writer would blaze through marking all as erased even before the reader starts
-            // this is not a hard check, this behaviour was expected and this test only exists as proving that the behaviour actually takes place
+            // this is not a hard check, this behaviour was expected and this test only exists for proving that the behaviour actually takes place
             assert!(sum > SIZE/2);
         });
 
