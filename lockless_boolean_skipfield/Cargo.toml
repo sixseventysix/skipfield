@@ -1,0 +1,6 @@
+[package]
+name = "lockless_boolean_skipfield"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
