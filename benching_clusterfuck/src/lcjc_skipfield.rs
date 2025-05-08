@@ -122,6 +122,10 @@ impl LCJCSkipfield {
     pub fn debug(&self) -> &[u8] {
         &self.nodes
     }
+
+    pub fn iter(&self) -> LCJCSkipfieldIter<'_> {
+        LCJCSkipfieldIter::new(&self.nodes)
+    }
 }
 
 pub struct LCJCSkipfieldIter<'a> {

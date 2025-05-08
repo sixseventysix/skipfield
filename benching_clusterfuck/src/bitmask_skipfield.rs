@@ -87,6 +87,10 @@ impl BitmaskSkipfield {
     fn bit_pos(index: usize) -> (usize, usize) {
         (index / 64, index % 64)
     }
+
+    pub fn iter(&self) -> BitmaskSkipfieldIter<'_> {
+        BitmaskSkipfieldIter::new(&self.chunks, self.len)
+    }
 }
 
 pub struct BitmaskSkipfieldIter<'a> {
@@ -94,7 +98,6 @@ pub struct BitmaskSkipfieldIter<'a> {
     len: usize,
     chunk_i: usize,
     bitset: u64,
-    offset: usize,
 }
 
 impl<'a> BitmaskSkipfieldIter<'a> {
@@ -104,9 +107,10 @@ impl<'a> BitmaskSkipfieldIter<'a> {
             len,
             chunk_i: 0,
             bitset: 0,
-            offset: 0,
         };
-        iter.advance_to_next_chunk();
+        if !chunks.is_empty() {
+            iter.bitset = !chunks[0];
+        }
         iter
     }
 
@@ -115,7 +119,6 @@ impl<'a> BitmaskSkipfieldIter<'a> {
             let inv = !self.chunks[self.chunk_i];
             if inv != 0 {
                 self.bitset = inv;
-                self.offset = 0;
                 return;
             }
             self.chunk_i += 1;
@@ -127,14 +130,23 @@ impl<'a> Iterator for BitmaskSkipfieldIter<'a> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.bitset != 0 {
-            let tz = self.bitset.trailing_zeros() as usize;
-            self.bitset &= self.bitset - 1;
-            return Some(self.chunk_i * 64 + tz);
+        loop {
+            while self.bitset != 0 {
+                let tz = self.bitset.trailing_zeros() as usize;
+                self.bitset &= self.bitset - 1;
+                return Some(self.chunk_i * 64 + tz);
+            }
+    
+            self.chunk_i += 1;
+            if self.chunk_i >= self.chunks.len() {
+                return None;
+            }
+    
+            let inv = !self.chunks[self.chunk_i];
+            if inv != 0 {
+                self.bitset = inv;
+            }
         }
-        self.chunk_i += 1;
-        self.advance_to_next_chunk();
-        self.next()
     }
 }
 
@@ -288,5 +300,67 @@ mod tests {
         assert_eq!(sf.count_active(), 0);
         assert_eq!(sf.count_skipped(), 0);
         assert_eq!(sf.active_indices_2().count(), 0);
+    }
+
+    #[test]
+    fn test_single_active_bit() {
+        let mut skipfield = BitmaskSkipfield::new(64);
+        for i in 0..64 {
+            skipfield.skip(i);
+        }
+        skipfield.unskip(7); // mark index 7 as active
+
+        let mut iter = skipfield.iter().take(2);
+        assert_eq!(iter.next(), Some(7));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_multiple_active_indices() {
+        let mut skipfield = BitmaskSkipfield::new(128);
+        for i in 0..128 {
+            skipfield.skip(i);
+        }
+
+        let active = [3, 66, 100];
+        for &i in &active {
+            skipfield.unskip(i);
+        }
+
+        let collected: Vec<_> = skipfield.iter().collect();
+        assert_eq!(collected, active);
+    }
+
+    #[test]
+    fn test_no_active_bits() {
+        let mut skipfield = BitmaskSkipfield::new(128);
+        for i in 0..128 {
+            skipfield.skip(i);
+        }
+
+        let mut iter = skipfield.iter();
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_all_active_bits() {
+        let skipfield = BitmaskSkipfield::new(128);
+        let expected: Vec<_> = (0..128).collect();
+        let collected: Vec<_> = skipfield.iter().collect();
+        assert_eq!(collected, expected);
+    }
+
+    #[test]
+    fn test_bounds_handling_on_last_chunk() {
+        let len = 70;
+        let mut skipfield = BitmaskSkipfield::new(len);
+        for i in 0..len {
+            if i != 69 {
+                skipfield.skip(i);
+            }
+        }
+
+        let result: Vec<_> = skipfield.iter().collect();
+        assert_eq!(result, vec![69]);
     }
 }
