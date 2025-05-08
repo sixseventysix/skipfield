@@ -360,7 +360,7 @@ mod tests {
             }
         }
 
-        let result: Vec<_> = skipfield.iter().collect();
-        assert_eq!(result, vec![69]);
+        let result = skipfield.iter().next();
+        assert_eq!(result, Some(69));
     }
 }

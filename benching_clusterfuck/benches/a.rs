@@ -6,7 +6,7 @@ use benching_clusterfuck::{
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
 
-const N: usize = 100_000;
+const N: usize = 1_000_000;
 const SKIP_RATIO: f64 = 0.3;
 
 fn setup_lcjc() -> LCJCSkipfield {

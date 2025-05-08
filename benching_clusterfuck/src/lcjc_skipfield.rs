@@ -143,15 +143,14 @@ impl<'a> Iterator for LCJCSkipfieldIter<'a> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while self.index < self.skips.len() {
-            let skip = self.skips[self.index] as usize;
-            let out = self.index;
-            self.index += skip + 1;
-            if skip == 0 {
-                return Some(out);
-            }
+        if self.index >= self.skips.len() {
+            return None;
         }
-        None
+
+        let out = self.index;
+        let skip = self.skips[self.index] as usize;
+        self.index += skip + 1;
+        Some(out)
     }
 }
 
