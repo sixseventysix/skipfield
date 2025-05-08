@@ -80,13 +80,9 @@ impl LCJCSkipfield {
         let mut i = 0;
         let mut total = 0;
         while i < self.nodes.len() {
-            if self.nodes[i] == 0 {
-                i += 1;
-            } else {
-                let skip = self.nodes[i] as usize;
-                total += skip;
-                i += skip;
-            }
+            let skip = self.nodes[i] as usize;
+            total += skip;
+            i += skip+1;
         }
         total
     }
@@ -125,6 +121,33 @@ impl LCJCSkipfield {
 
     pub fn debug(&self) -> &[u8] {
         &self.nodes
+    }
+}
+
+pub struct LCJCSkipfieldIter<'a> {
+    skips: &'a [u8],
+    index: usize,
+}
+
+impl<'a> LCJCSkipfieldIter<'a> {
+    pub fn new(skips: &'a [u8]) -> Self {
+        Self { skips, index: 0 }
+    }
+}
+
+impl<'a> Iterator for LCJCSkipfieldIter<'a> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.index < self.skips.len() {
+            let skip = self.skips[self.index] as usize;
+            let out = self.index;
+            self.index += skip + 1;
+            if skip == 0 {
+                return Some(out);
+            }
+        }
+        None
     }
 }
 
